@@ -15,7 +15,7 @@ public class Main {
 		setup();
 		System.out.println("Welcome to the RANDOMAT");
 		System.out.print("Would you liek to go first or second(1/2): ");
-		Scanner reader = new Scanner(System.in);  // Reading from System.in
+		reader = new Scanner(System.in);  // Reading from System.in
 		System.out.println();
 		int turn = reader.nextInt(); // Scans the next tokens of the input.
 		if(turn == 1) {
@@ -24,7 +24,7 @@ public class Main {
 				GetMove();
 				GameOver();
 				printBoard();
-				MakeRComputerMove();
+				MakeComputerMove();
 				ClearUndo();
 				GameOver();
 			} 
@@ -32,7 +32,7 @@ public class Main {
 		else {
 			for (;;){
 				printBoard();
-				MakeRComputerMove();
+				MakeComputerMove();
 				GameOver();
 				ClearUndo();
 				printBoard();
@@ -88,6 +88,24 @@ public class Main {
 		}
 	}
 	
+	private static int CheckWinner() {
+		LegalMoves(1, depthCount);
+		if(moveIndex == 0) {
+			return 5000;
+		}
+		if(CheckKing(1)) {
+			return 5000;
+		}
+		LegalMoves(0, depthCount);
+		if(moveIndex == 0) {
+			return -5000;
+		}
+		if(CheckKing(0)) {
+			return -5000;
+		}
+		return -1;
+	}
+	
 	private static boolean CheckKing(int player) {
 		boolean kingNotPresent = true;
 		if(player == 1) {
@@ -108,14 +126,214 @@ public class Main {
 		}
 		return kingNotPresent;
 	}
-	private static void MakeRComputerMove() {
-		LegalMoves(0, depthCount);
-		Random rand = new Random();
-		int index = rand.nextInt(moveIndex);
+	
+	private static void MakeComputerMove() {
+		int best=-20000,depth=0,score = -20000;
+		String tempMove = null;
+		LegalMoves(0, depth);
+		int temp = moveIndex;
+		for(int i = 0; i < temp; i++) {
+			MakeMove(legalMoves[i][depth]);
+			score = Min(depth+1);
+			if(score > best) {
+				best = score;
+				tempMove = legalMoves[i][depth];				 
+			}
+			UndoMove();
+		}
 		System.out.println();
-		System.out.println("My Move is: " + legalMoves[index][depthCount].toString());
+		System.out.println("My Move is: " + tempMove);
 		System.out.println();
-		MakeMove(legalMoves[index][depthCount]);
+		MakeUndoableMove(tempMove);
+	}
+	
+	private static int Min(int depth) {
+		if (CheckWinner() != -1) return (CheckWinner()+depth);
+		if(depth == depthCount) {
+			return CalculateHeristic();
+		}
+		int best=20000,score = 20000;
+		LegalMoves(1, depth);
+		int temp = moveIndex;
+		for(int i = 0; i < temp; i++) {
+			MakeMove(legalMoves[i][depth]);
+			score = Max(depth+1);
+			if(score < best) {
+				best = score;			 
+			}
+			UndoMove();
+		}
+		return best;
+	}
+	
+	private static int Max(int depth) {
+		if (CheckWinner() != -1) return (CheckWinner()+depth);
+		if(depth == depthCount) {
+			return CalculateHeristic();
+		}
+		int best=-20000,score = -20000;
+		LegalMoves(0, depth);
+		int temp = moveIndex;
+		for(int i = 0; i < temp; i++) {
+			MakeMove(legalMoves[i][depth]);
+			score = Min(depth+1);
+			if(score > best) {
+				best = score;				 
+			}
+			UndoMove();
+		}
+		return best;
+	}
+	
+	private static int CalculateHeristic() {
+		int value;
+		value = ((3*CalculateMobility()) + (2 * CalculatePieces()) + CalculateCenter());
+		return value;
+	}
+	
+	private static int CalculateMobility() {
+		int value = 0;
+		for(int y = 0; y < 9; y++) {
+			for(int x = 0; x < 7; x++) {
+				if(board[x][y] == '-') ;
+				else {
+					switch(board[x][y]){
+						case 'P':
+							value += 3;
+							break;
+						case 'R':
+							value += 9;
+							break;
+						case 'N':
+							value += 8;
+							break;
+						case 'B':
+							value += 8;
+							break;
+						case 'K':
+							value += 3;
+							break;
+						case 'p':
+							value -= 3;
+							break;
+						case 'r':
+							value -= 9;
+							break;
+						case 'n':
+							value -= 8;
+							break;
+						case 'b':
+							value -= 8;
+							break;
+						case 'k':
+							value -= 3;
+							break;							
+					}
+				}
+				
+			}
+		}
+		return value;
+	}
+	
+	private static int CalculatePieces() {
+		int value = 0;
+		for(int y = 0; y < 9; y++) {
+			for(int x = 0; x < 7; x++) {
+				if(board[x][y] == '-') ;
+				else {
+					switch(board[x][y]){
+						case 'P':
+							value += 1;
+							break;
+						case 'R':
+							value += 1;
+							break;
+						case 'N':
+							value += 1;
+							break;
+						case 'B':
+							value += 1;
+							break;
+						case 'K':
+							value += 1;
+							break;
+						case 'p':
+							value -= 1;
+							break;
+						case 'r':
+							value -= 1;
+							break;
+						case 'n':
+							value -= 1;
+							break;
+						case 'b':
+							value -= 1;
+							break;
+						case 'k':
+							value -= 1;
+							break;							
+					}
+				}
+				
+			}
+		}
+		return value;
+	}
+	
+	private static int CalculateCenter() {
+		int value = 0;
+		for(int y = 0; y < 9; y++) {
+			for(int x = 0; x < 7; x++) {
+				if(board[x][y] == '-') ;
+				else {
+					int tempDistance = 0;
+					switch(board[x][y]){
+						case 'P':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value += (9 - tempDistance);
+							break;
+						case 'R':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value += (9 - tempDistance);
+							break;
+						case 'N':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value += (9 - tempDistance);
+							break;
+						case 'B':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value += (9 - tempDistance);
+							break;
+						case 'K':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value += (9 - tempDistance);
+							break;
+						case 'p':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value -= (9 - tempDistance);
+							break;
+						case 'r':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value -= (9 - tempDistance);
+							break;
+						case 'n':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value -= (9 - tempDistance);
+							break;
+						case 'b':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value -= (9 - tempDistance);
+							break;
+						case 'k':
+							tempDistance = Math.abs(3 - x) + Math.abs(4 - y);
+							value -= (9 - tempDistance);
+							break;							
+					}
+				}
+			}
+		}
+		return value;
 	}
 	
 	private static boolean CheckLegality(String move){
@@ -187,7 +405,7 @@ public class Main {
 			board[x][y-1] = '-';
 		}
 		else {
-			char temp = board[xDes][yDes];
+			char temp = board[xDes][yDes-1];
 			moveUndo[undoIndex] = Integer.toString(x) + Integer.toString(y) + Integer.toString(xDes) + Integer.toString(yDes) + temp +  Integer.toString(xDes) + Integer.toString(yDes);
 			undoIndex++;
 			board[xDes][yDes-1] = board[x][y-1];
@@ -259,6 +477,77 @@ public class Main {
 		undoIndex = 0;
 	}
 	
+	private static void UndoMove() {
+		undoIndex--;
+		int x = 0;
+		int y = 0;
+		int xDes = 0;
+		int yDes = 0;
+		if(moveUndo[undoIndex].length() >= 4) {
+			x = Character.getNumericValue(moveUndo[undoIndex].charAt(0));
+			y = Character.getNumericValue(moveUndo[undoIndex].charAt(1));
+			y-=1;
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(2));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(3));
+			yDes-=1;
+			char temp = board[xDes][yDes];
+			board[x][y] = temp;
+			board[xDes][yDes] = '-';
+		}
+		if(moveUndo[undoIndex].length() >= 7) {
+			char tempPiece = moveUndo[undoIndex].charAt(4);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(5));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(6));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+		if(moveUndo[undoIndex].length() >= 10) {
+			char tempPiece = moveUndo[undoIndex].charAt(7);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(8));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(9));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+
+		if(moveUndo[undoIndex].length() >= 13) {
+			char tempPiece = moveUndo[undoIndex].charAt(10);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(11));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(12));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+		if(moveUndo[undoIndex].length() >= 16) {
+			char tempPiece = moveUndo[undoIndex].charAt(13);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(14));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(15));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+		if(moveUndo[undoIndex].length() >= 19) {
+			char tempPiece = moveUndo[undoIndex].charAt(16);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(17));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(18));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+
+		else if(moveUndo[undoIndex].length() >= 22) {
+			char tempPiece = moveUndo[undoIndex].charAt(19);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(20));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(21));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+		else if(moveUndo[undoIndex].length() == 25) {
+			char tempPiece = moveUndo[undoIndex].charAt(22);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(23));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(24));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+		moveUndo[undoIndex] = null;
+	}
+	
 	
 
 	private static void setup() {
@@ -291,6 +580,8 @@ public class Main {
 		board[2][5] = 'P';
 		board[4][5] = 'P';
 		board[6][5] = 'P';
+		
+		board[3][8] = 'K';
 		legalMoves = new String[100][depthCount+1];
 		
 	}
@@ -359,21 +650,6 @@ public class Main {
 			}
 		}
 		
-	}
-
-	private static void PrintMoves(int player, int depth) {
-		if(player == 1) {
-			System.out.println("Legal Human Moves");
-			for(int x = 0; x < moveIndex; x++) {
-				System.out.println(legalMoves[x][depth]);
-			}
-		}
-		else {
-			System.out.println("Legal Computer Moves");
-			for(int x = 0; x < moveIndex; x++) {
-				System.out.println(legalMoves[x][depth]);
-			}
-		}
 	}
 	
 	private static void PawnMoves(int x, int y, int depth) {
@@ -1501,28 +1777,32 @@ public class Main {
 			}
 			if(board[tempX][tempY] != 'p' && board[tempX][tempY] != 'b' && board[tempX][tempY] != 'n' && board[tempX][tempY] != 'r' && board[tempX][tempY] != 'k' && board[tempX][tempY] != '-') {
 				switch(tempX) {
-				case 1:
+				case 0:
 					legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (tempY+1);
 					moveIndex++;
 					break;
+				case 1:
+					legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (tempY+1);
+					moveIndex++;
+					break;
 				case 2:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "B" + (tempY+1);
+					legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (tempY+1);
 					moveIndex++;
 					break;
 				case 3:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "D" + (tempY+1);
+					legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (tempY+1);
 					moveIndex++;
 					break;
 				case 4:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "E" + (tempY+1);
+					legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (tempY+1);
 					moveIndex++;
 					break;
 				case 5:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "F" + (tempY+1);
+					legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (tempY+1);
 					moveIndex++;
 					break;
 				case 6:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "G" + (tempY+1);
+					legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (tempY+1);
 					moveIndex++;
 					break;
 				}
@@ -2034,7 +2314,7 @@ public class Main {
 						moveIndex++;
 						break outerloop;
 					}
-					if(tempY <= 0) {
+					if(tempY <= 0 || tempX > 5) {
 						break outerloop;
 					}
 					tempX++;
@@ -2069,11 +2349,11 @@ public class Main {
 					}
 				}
 			}
-			if(y > 0) {
+			if(y < 8) {
 				tempX = x + 1;
 				tempY = y + 1;
 				while(board[tempX][tempY] == '-') {
-					if(tempY > 7)
+					if(tempY > 7 || tempX > 5)
 						break;
 					tempX++;
 					tempY++;
@@ -2111,7 +2391,7 @@ public class Main {
 		}
 		else if( x == 6) {
 			int tempX, tempY;
-			if(y < 8) {
+			if(y > 0) {
 				tempX = x - 1;
 				tempY = y - 1;
 				outerloop: while(board[tempX][tempY] == '-') {
@@ -2142,7 +2422,7 @@ public class Main {
 						break outerloop;
 					}
 					
-					if(tempY <= 0) {
+					if(tempY <= 0 || tempX < 1) {
 						break outerloop;
 					}
 					tempX--;
@@ -2177,11 +2457,11 @@ public class Main {
 					}
 				}
 			}
-			if(y > 0) {
+			if(y < 8) {
 				tempX = x - 1;
 				tempY = y + 1;
 				while(board[tempX][tempY] == '-') {
-					if(tempY > 7)
+					if(tempY > 7 || tempX < 1)
 						break;
 					tempX--;
 					tempY++;
@@ -3028,28 +3308,32 @@ public class Main {
 			}
 			if(board[tempX][tempY] != 'P' && board[tempX][tempY] != 'B' && board[tempX][tempY] != 'N' && board[tempX][tempY] != 'R' && board[tempX][tempY] != 'K' && board[tempX][tempY] != '-') {
 				switch(tempX) {
-				case 1:
+				case 0:
 					legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (tempY+1);
 					moveIndex++;
 					break;
+				case 1:
+					legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (tempY+1);
+					moveIndex++;
+					break;
 				case 2:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "B" + (tempY+1);
+					legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (tempY+1);
 					moveIndex++;
 					break;
 				case 3:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "D" + (tempY+1);
+					legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (tempY+1);
 					moveIndex++;
 					break;
 				case 4:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "E" + (tempY+1);
+					legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (tempY+1);
 					moveIndex++;
 					break;
 				case 5:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "F" + (tempY+1);
+					legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (tempY+1);
 					moveIndex++;
 					break;
 				case 6:
-					legalMoves[moveIndex][depth] = "A" + (y+1) + "G" + (tempY+1);
+					legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (tempY+1);
 					moveIndex++;
 					break;
 				}
