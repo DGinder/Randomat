@@ -1,3 +1,5 @@
+import java.util.Random;
+import java.util.Scanner;
 
 public class Main {
 
@@ -7,17 +9,257 @@ public class Main {
 	static int undoIndex = 0;
 	static String[][] legalMoves;
 	static int moveIndex;
+	static Scanner reader = new Scanner(System.in);  // Reading from System.in
 	
 	public static void main(String[] args) {
 		setup();
-		printBoard();
-		System.out.println("");
-		legalMoves = new String[100][depthCount];
-		LegalMoves(1, 0);
-		PrintMoves(1, 0);
-		LegalMoves(0, 0);
-		PrintMoves(0, 0);
+		System.out.println("Welcome to the RANDOMAT");
+		System.out.print("Would you liek to go first or second(1/2): ");
+		Scanner reader = new Scanner(System.in);  // Reading from System.in
+		System.out.println();
+		int turn = reader.nextInt(); // Scans the next tokens of the input.
+		if(turn == 1) {
+			for (;;){
+				printBoard();
+				GetMove();
+				GameOver();
+				printBoard();
+				MakeRComputerMove();
+				ClearUndo();
+				GameOver();
+			} 
+		}
+		else {
+			for (;;){
+				printBoard();
+				MakeRComputerMove();
+				GameOver();
+				ClearUndo();
+				printBoard();
+				GetMove();
+				GameOver();
+			}
+		}
 	}
+	
+	private static void GetMove() {
+		LegalMoves(1, depthCount);
+		System.out.println();
+		System.out.println("Enter a Move: ");
+		String move = reader.next(); // Scans the next tokens of the input.
+		System.out.println();
+		move = move.toUpperCase();
+		move = move.trim();
+		//once finished
+		while(CheckLegality(move) == false) {
+			System.out.println("Not a legal move");
+			System.out.print("Enter a Move: ");
+			System.out.println();
+			move = reader.next(); // Scans the next tokens of the input.
+			move = move.toUpperCase();
+			move = move.trim();
+		}
+		MakeUndoableMove(move);
+		
+	}
+	
+	private static void GameOver() {
+		LegalMoves(1, depthCount);
+		if(moveIndex == 0) {
+			System.out.println("I Win");
+			reader.close();
+			System.exit(0);
+		}
+		if(CheckKing(1)) {
+			System.out.println("I Win");
+			reader.close();
+			System.exit(0);
+		}
+		LegalMoves(0, depthCount);
+		if(moveIndex == 0) {
+			System.out.println("You Win");
+			reader.close();
+			System.exit(0);
+		}
+		if(CheckKing(0)) {
+			System.out.println("You Win");
+			reader.close();
+			System.exit(0);
+		}
+	}
+	
+	private static boolean CheckKing(int player) {
+		boolean kingNotPresent = true;
+		if(player == 1) {
+			for(int y = 0; y < 9; y++) {
+				for(int x = 0; x < 7; x++) {
+					if(board[x][y] == 'k')
+						kingNotPresent = false;
+				}
+			}
+		}
+		else {
+			for(int y = 0; y < 9; y++) {
+				for(int x = 0; x < 7; x++) {
+					if(board[x][y] == 'K')
+						kingNotPresent = false;
+				}
+			}
+		}
+		return kingNotPresent;
+	}
+	private static void MakeRComputerMove() {
+		LegalMoves(0, depthCount);
+		Random rand = new Random();
+		int index = rand.nextInt(moveIndex);
+		System.out.println();
+		System.out.println("My Move is: " + legalMoves[index][depthCount].toString());
+		System.out.println();
+		MakeMove(legalMoves[index][depthCount]);
+	}
+	
+	private static boolean CheckLegality(String move){
+		boolean legal = false;
+		for(int i = 0; i < moveIndex; i++) {
+			if(legalMoves[i][depthCount].equals(move))
+				legal = true;
+		}
+		return legal;
+	}
+	
+	private static void MakeMove(String move) {
+		int x = 0;
+		int y = 0;
+		int xDes = 0;
+		int yDes = 0;;
+		switch (move.charAt(0)) {
+		case 'A':
+			x = 0;
+			break;
+		case 'B':
+			x = 1;
+			break;
+		case 'C':
+			x = 2;
+			break;
+		case 'D':
+			x = 3;
+			break;
+		case 'E':
+			x = 4;
+			break;
+		case 'F':
+			x = 5;
+			break;
+		case 'G':
+			x = 6;
+			break;
+		}
+		y = Character.getNumericValue(move.charAt(1));
+		switch (move.charAt(2)) {
+		case 'A':
+			xDes = 0;
+			break;
+		case 'B':
+			xDes = 1;
+			break;
+		case 'C':
+			xDes = 2;
+			break;
+		case 'D':
+			xDes = 3;
+			break;
+		case 'E':
+			xDes = 4;
+			break;
+		case 'F':
+			xDes = 5;
+			break;
+		case 'G':
+			xDes = 6;
+			break;
+		}
+		yDes = Character.getNumericValue(move.charAt(3));
+		if(board[xDes][yDes-1] == '-') {
+			moveUndo[undoIndex] = Integer.toString(x) + Integer.toString(y) + Integer.toString(xDes) + Integer.toString(yDes);
+			undoIndex++;
+			board[xDes][yDes-1] = board[x][y-1];
+			board[x][y-1] = '-';
+		}
+		else {
+			char temp = board[xDes][yDes];
+			moveUndo[undoIndex] = Integer.toString(x) + Integer.toString(y) + Integer.toString(xDes) + Integer.toString(yDes) + temp +  Integer.toString(xDes) + Integer.toString(yDes);
+			undoIndex++;
+			board[xDes][yDes-1] = board[x][y-1];
+			board[x][y-1] = '-';
+		}
+	}
+	
+	private static void MakeUndoableMove(String move) {
+		int x = 0;
+		int y = 0;
+		int xDes = 0;
+		int yDes = 0;;
+		switch (move.charAt(0)) {
+		case 'A':
+			x = 0;
+			break;
+		case 'B':
+			x = 1;
+			break;
+		case 'C':
+			x = 2;
+			break;
+		case 'D':
+			x = 3;
+			break;
+		case 'E':
+			x = 4;
+			break;
+		case 'F':
+			x = 5;
+			break;
+		case 'G':
+			x = 6;
+			break;
+		}
+		y = Character.getNumericValue(move.charAt(1));
+		switch (move.charAt(2)) {
+		case 'A':
+			xDes = 0;
+			break;
+		case 'B':
+			xDes = 1;
+			break;
+		case 'C':
+			xDes = 2;
+			break;
+		case 'D':
+			xDes = 3;
+			break;
+		case 'E':
+			xDes = 4;
+			break;
+		case 'F':
+			xDes = 5;
+			break;
+		case 'G':
+			xDes = 6;
+			break;
+		}
+		yDes = Character.getNumericValue(move.charAt(3));
+		board[xDes][yDes-1] = board[x][y-1];
+		board[x][y-1] = '-';
+	}
+	
+	private static void ClearUndo() {
+		for(int i = 0; i < undoIndex; i++) {
+			moveUndo[i] = null;
+		}
+		undoIndex = 0;
+	}
+	
+	
 
 	private static void setup() {
 		for(int y = 0; y < 9; y++) {
@@ -49,6 +291,7 @@ public class Main {
 		board[2][5] = 'P';
 		board[4][5] = 'P';
 		board[6][5] = 'P';
+		legalMoves = new String[100][depthCount+1];
 		
 	}
 	
@@ -150,7 +393,7 @@ public class Main {
 					legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+2);
 					moveIndex++;
 				}
-				if(board[x-1][y+1] != '-' && board[x+1][y+1] != 'p' && board[x+1][y+1] != 'b' && board[x+1][y+1] != 'n' && board[x+1][y+1] != 'r' && board[x+1][y+1] != 'k') {
+				if(board[x-1][y+1] != '-' && board[x-1][y+1] != 'p' && board[x-1][y+1] != 'b' && board[x-1][y+1] != 'n' && board[x-1][y+1] != 'r' && board[x-1][y+1] != 'k') {
 					legalMoves[moveIndex][depth] = "G" + (y+1) + "F" + (y+2);
 					moveIndex++;
 				}
@@ -1676,7 +1919,7 @@ public class Main {
 					legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y);
 					moveIndex++;
 				}
-				if(board[x-1][y-1] != '-' && board[x+1][y-1] != 'P' && board[x+1][y-1] != 'B' && board[x+1][y-1] != 'N' && board[x+1][y-1] != 'R' && board[x+1][y-1] != 'K') {
+				if(board[x-1][y-1] != '-' && board[x-1][y-1] != 'P' && board[x-1][y-1] != 'B' && board[x-1][y-1] != 'N' && board[x-1][y-1] != 'R' && board[x-1][y-1] != 'K') {
 					legalMoves[moveIndex][depth] = "G" + (y+1) + "F" + (y);
 					moveIndex++;
 				}
