@@ -4,15 +4,18 @@ import java.util.Scanner;
 public class Main {
 
 	static char[][] board = new char[7][9];
-	static int depthCount = 3;
+	static int depthCount = 5;
 	static String[] moveUndo = new String[100];
 	static int undoIndex = 0;
 	static String[][] legalMoves;
 	static int moveIndex;
 	static Scanner reader = new Scanner(System.in);  // Reading from System.in
+	static String finalComputerMove = "";
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) {//main class calls everything else
 		setup();
+	System.out.println(Character.toChars(9812));
+		
 		System.out.println("Welcome to the RANDOMAT");
 		System.out.print("Would you liek to go first or second(1/2): ");
 		reader = new Scanner(System.in);  // Reading from System.in
@@ -42,53 +45,53 @@ public class Main {
 		}
 	}
 	
-	private static void GetMove() {
-		LegalMoves(1, depthCount);
+	private static void GetMove() {//reads human move and plays it on board
+		LegalMoves(1, depthCount);//gets human legal moves
 		System.out.println();
-		System.out.println("Enter a Move: ");
+		System.out.println("Enter a Move: ");//prompt
 		String move = reader.next(); // Scans the next tokens of the input.
 		System.out.println();
-		move = move.toUpperCase();
+		move = move.toUpperCase();//refactors the move to be more readable
 		move = move.trim();
 		//once finished
-		while(CheckLegality(move) == false) {
-			System.out.println("Not a legal move");
+		while(CheckLegality(move) == false) {//checks move legality and if the move is not legal
+			System.out.println("Not a legal move");//prompt and read for a new move
 			System.out.print("Enter a Move: ");
 			System.out.println();
 			move = reader.next(); // Scans the next tokens of the input.
 			move = move.toUpperCase();
 			move = move.trim();
 		}
-		MakeUndoableMove(move);
+		MakeUndoableMove(move);//makes the move
 		
 	}
 	
-	private static void GameOver() {
+	private static void GameOver() {//checks if either player or computer has has lost if both lose at same time ddefaults to computer win
 		LegalMoves(1, depthCount);
-		if(moveIndex == 0) {
+		if(moveIndex == 0) {//if there are no legal moves for player
 			System.out.println("I Win");
 			reader.close();
 			System.exit(0);
 		}
-		if(CheckKing(1)) {
+		if(CheckKing(1)) {//if there is no king for player
 			System.out.println("I Win");
 			reader.close();
 			System.exit(0);
 		}
-		LegalMoves(0, depthCount);
+		LegalMoves(0, depthCount);//if the computer has nop legal moves
 		if(moveIndex == 0) {
 			System.out.println("You Win");
 			reader.close();
 			System.exit(0);
 		}
-		if(CheckKing(0)) {
+		if(CheckKing(0)) {//if the computer has no king
 			System.out.println("You Win");
 			reader.close();
 			System.exit(0);
 		}
 	}
 	
-	private static int CheckWinner() {
+	private static int CheckWinner() {//same as game over but returns heristic value
 		LegalMoves(1, depthCount);
 		if(moveIndex == 0) {
 			return 5000;
@@ -106,48 +109,53 @@ public class Main {
 		return -1;
 	}
 	
-	private static boolean CheckKing(int player) {
+	private static boolean CheckKing(int player) {//boolean to check if a king exists with parameter determining which side
 		boolean kingNotPresent = true;
-		if(player == 1) {
+		if(player == 1) {//if checking on human king
 			for(int y = 0; y < 9; y++) {
-				for(int x = 0; x < 7; x++) {
+				for(int x = 0; x < 7; x++) {//check board
 					if(board[x][y] == 'k')
-						kingNotPresent = false;
+						kingNotPresent = false; // if found return false
 				}
 			}
 		}
-		else {
+		else {//if checking on computer king
 			for(int y = 0; y < 9; y++) {
-				for(int x = 0; x < 7; x++) {
+				for(int x = 0; x < 7; x++) {//check board
 					if(board[x][y] == 'K')
-						kingNotPresent = false;
+						kingNotPresent = false;//if found return false
 				}
 			}
 		}
-		return kingNotPresent;
+		return kingNotPresent;// if not found return true
 	}
 	
 	private static void MakeComputerMove() {
-		int best=-20000,depth=0,score = -20000;
+		AnalyzeMoves();
+		System.out.println();
+		System.out.println("My Move is: " + finalComputerMove);
+		System.out.println();
+		MakeUndoableMove(finalComputerMove);
+	}
+	
+	private static void AnalyzeMoves() {
+		int best=-20000,  beta = 20000, depth=0,score = -20000;
 		String tempMove = null;
 		LegalMoves(0, depth);
 		int temp = moveIndex;
 		for(int i = 0; i < temp; i++) {
 			MakeMove(legalMoves[i][depth]);
-			score = Min(depth+1);
+			score = Min(depth+1, best, beta, i);
 			if(score > best) {
 				best = score;
 				tempMove = legalMoves[i][depth];				 
 			}
 			UndoMove();
 		}
-		System.out.println();
-		System.out.println("My Move is: " + tempMove);
-		System.out.println();
-		MakeUndoableMove(tempMove);
+		finalComputerMove = tempMove;
 	}
 	
-	private static int Min(int depth) {
+	private static int Min(int depth, int alpha, int beta, int baseCount) {
 		if (CheckWinner() != -1) return (CheckWinner()+depth);
 		if(depth == depthCount) {
 			return CalculateHeristic();
@@ -157,16 +165,19 @@ public class Main {
 		int temp = moveIndex;
 		for(int i = 0; i < temp; i++) {
 			MakeMove(legalMoves[i][depth]);
-			score = Max(depth+1);
+			score = Max(depth+1, alpha, best, i);
 			if(score < best) {
 				best = score;			 
 			}
 			UndoMove();
+			if(best < alpha) {
+				return best;
+			}
 		}
 		return best;
 	}
 	
-	private static int Max(int depth) {
+	private static int Max(int depth, int alpha, int beta, int baseCount) {
 		if (CheckWinner() != -1) return (CheckWinner()+depth);
 		if(depth == depthCount) {
 			return CalculateHeristic();
@@ -176,11 +187,14 @@ public class Main {
 		int temp = moveIndex;
 		for(int i = 0; i < temp; i++) {
 			MakeMove(legalMoves[i][depth]);
-			score = Min(depth+1);
+			score = Min(depth+1, best, beta,baseCount);
 			if(score > best) {
 				best = score;				 
 			}
 			UndoMove();
+			if(best > beta) {
+				return best;
+			}
 		}
 		return best;
 	}
@@ -247,31 +261,31 @@ public class Main {
 							value += 1;
 							break;
 						case 'R':
-							value += 1;
+							value += 5;
 							break;
 						case 'N':
-							value += 1;
+							value += 3;
 							break;
 						case 'B':
-							value += 1;
+							value += 3;
 							break;
 						case 'K':
-							value += 1;
+							value += 100;
 							break;
 						case 'p':
 							value -= 1;
 							break;
 						case 'r':
-							value -= 1;
+							value -= 5;
 							break;
 						case 'n':
-							value -= 1;
+							value -= 3;
 							break;
 						case 'b':
-							value -= 1;
+							value -= 3;
 							break;
 						case 'k':
-							value -= 1;
+							value -= 100;
 							break;							
 					}
 				}
@@ -398,18 +412,271 @@ public class Main {
 			break;
 		}
 		yDes = Character.getNumericValue(move.charAt(3));
-		if(board[xDes][yDes-1] == '-') {
-			moveUndo[undoIndex] = Integer.toString(x) + Integer.toString(y) + Integer.toString(xDes) + Integer.toString(yDes);
-			undoIndex++;
-			board[xDes][yDes-1] = board[x][y-1];
-			board[x][y-1] = '-';
+		char tempPiece = board[x][y-1];
+		if(x != xDes || y != yDes) {
+			if(board[xDes][yDes-1] == '-') {
+				moveUndo[undoIndex] = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(xDes) + Integer.toString(yDes);
+				undoIndex++;
+				board[xDes][yDes-1] = board[x][y-1];
+				board[x][y-1] = '-';
+			}
+			else {
+				char temp = board[xDes][yDes-1];
+				moveUndo[undoIndex] = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(xDes) + Integer.toString(yDes) + temp +  Integer.toString(xDes) + Integer.toString(yDes);
+				undoIndex++;
+				board[xDes][yDes-1] = board[x][y-1];
+				board[x][y-1] = '-';
+			}
 		}
 		else {
-			char temp = board[xDes][yDes-1];
-			moveUndo[undoIndex] = Integer.toString(x) + Integer.toString(y) + Integer.toString(xDes) + Integer.toString(yDes) + temp +  Integer.toString(xDes) + Integer.toString(yDes);
-			undoIndex++;
-			board[xDes][yDes-1] = board[x][y-1];
 			board[x][y-1] = '-';
+			if(x == 0 && y-1 == 0) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x][y] != '-') {
+					char temp = board[x][y];
+					tempString += temp + Integer.toString(x) + Integer.toString(y+1);
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					char temp = board[x+1][y];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y+1);
+					board[x+1][y] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					char temp = board[x+1][y-1];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y);
+					board[x+1][y-1] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+			}
+			else if(x == 6 && y-1 == 0) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x][y] != '-') {
+					char temp = board[x][y];
+					tempString += temp + Integer.toString(x) + Integer.toString(y+1);
+					board[x][y] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					char temp = board[x-1][y];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y+1);
+					board[x-1][y] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					char temp = board[x-1][y-1];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y);
+					board[x-1][y-1] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+			}
+			else if(x == 0 && y-1 == 8) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x][y-2] != '-') {
+					char temp = board[x][y-2];
+					tempString += temp + Integer.toString(x) + Integer.toString(y-1);
+					board[x][y-2] = '-';
+				}
+				if(board[x+1][y-2] != '-') {
+					char temp = board[x+1][y-2];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y-1);
+					board[x+1][y-2] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					char temp = board[x+1][y-1];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y);
+					board[x+1][y-1] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+			}
+			else if(x == 6 && y-1 == 8) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x][y-2] != '-') {
+					char temp = board[x][y-2];
+					tempString += temp + Integer.toString(x) + Integer.toString(y-1);
+					board[x][y-2] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					char temp = board[x-1][y-2];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y-1);
+					board[x-1][y-2] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					char temp = board[x-1][y-1];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y);
+					board[x-1][y-1] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+			}
+			else if(x == 0) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x][y] != '-') {
+					char temp = board[x][y];
+					tempString += temp + Integer.toString(x) + Integer.toString(y+1);
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					char temp = board[x+1][y];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y+1);
+					board[x+1][y] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					char temp = board[x+1][y-1];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y);
+					board[x+1][y-1] = '-';
+				}
+				if(board[x+1][y-2] != '-') {
+					char temp = board[x+1][y-2];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y-1);
+					board[x+1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					char temp = board[x][y-2];
+					tempString += temp + Integer.toString(x) + Integer.toString(y-1);
+					board[x][y-2] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+			}
+			else if(x == 6) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x][y] != '-') {
+					char temp = board[x][y];
+					tempString += temp + Integer.toString(x) + Integer.toString(y+1);
+					board[x][y] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					char temp = board[x-1][y];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y+1);
+					board[x-1][y] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					char temp = board[x-1][y-1];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y);
+					board[x-1][y-1] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					char temp = board[x-1][y-2];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y-1);
+					board[x-1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					char temp = board[x][y-2];
+					tempString += temp + Integer.toString(x) + Integer.toString(y-1);
+					board[x][y-2] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+			}
+			else if(y-1 == 0) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x-1][y-1] != '-') {
+					char temp = board[x-1][y-1];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y);
+					board[x-1][y-1] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					char temp = board[x-1][y];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y+1);
+					board[x-1][y] = '-';
+				}
+				if(board[x][y] != '-') {
+					char temp = board[x][y];
+					tempString += temp + Integer.toString(x) + Integer.toString(y+1);
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					char temp = board[x+1][y];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y+1);
+					board[x+1][y] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					char temp = board[x+1][y-1];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y);
+					board[x+1][y-1] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+
+			}
+			else if(y-1 == 8) {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x+1][y-1] != '-') {
+					char temp = board[x+1][y-1];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y);
+					board[x+1][y-1] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					char temp = board[x-1][y-2];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y-1);
+					board[x-1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					char temp = board[x][y-2];
+					tempString += temp + Integer.toString(x) + Integer.toString(y-1);
+					board[x][y-2] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					char temp = board[x-1][y-2];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y-1);
+					board[x-1][y-2] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					char temp = board[x-1][y-1];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y);
+					board[x-1][y-1] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+
+			}
+			else {
+				String tempString = tempPiece + Integer.toString(x) + Integer.toString(y) + Integer.toString(x) + Integer.toString(y);
+				if(board[x+1][y-1] != '-') {
+					char temp = board[x+1][y-1];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y);
+					board[x+1][y-1] = '-';
+				}
+				if(board[x+1][y-2] != '-') {
+					char temp = board[x+1][y-2];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y-1);
+					board[x+1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					char temp = board[x][y-2];
+					tempString += temp + Integer.toString(x) + Integer.toString(y-1);
+					board[x][y-2] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					char temp = board[x-1][y-2];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y-1);
+					board[x-1][y-2] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					char temp = board[x-1][y-1];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y);
+					board[x-1][y-1] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					char temp = board[x-1][y];
+					tempString += temp + Integer.toString(x-1) + Integer.toString(y+1);
+					board[x-1][y] = '-';
+				}
+				if(board[x][y] != '-') {
+					char temp = board[x][y];
+					tempString += temp + Integer.toString(x) + Integer.toString(y+1);
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					char temp = board[x+1][y];
+					tempString += temp + Integer.toString(x+1) + Integer.toString(y+1);
+					board[x+1][y] = '-';
+				}
+				moveUndo[undoIndex] = tempString;
+				undoIndex++;
+			}
 		}
 	}
 	
@@ -466,8 +733,154 @@ public class Main {
 			break;
 		}
 		yDes = Character.getNumericValue(move.charAt(3));
-		board[xDes][yDes-1] = board[x][y-1];
-		board[x][y-1] = '-';
+		if(x != xDes || y != yDes) {
+			yDes = Character.getNumericValue(move.charAt(3));
+			board[xDes][yDes-1] = board[x][y-1];
+			board[x][y-1] = '-';
+		}
+		else {
+			board[x][y-1] = '-';
+			if(x == 0 && y-1 == 0) {
+				if(board[x][y] != '-') {
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					board[x+1][y] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					board[x+1][y-1] = '-';
+				}
+			}
+			else if(x == 6 && y-1 == 0) {
+				if(board[x][y] != '-') {
+					board[x][y] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					board[x-1][y] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					board[x-1][y-1] = '-';
+				}
+			}
+			else if(x == 0 && y-1 == 8) {;
+				if(board[x][y-2] != '-') {
+					board[x][y-2] = '-';
+				}
+				if(board[x+1][y-2] != '-') {
+					board[x+1][y-2] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					board[x+1][y-1] = '-';
+				}
+			}
+			else if(x == 6 && y-1 == 8) {
+				if(board[x][y-2] != '-') {
+					board[x][y-2] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					board[x-1][y-2] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					board[x-1][y-1] = '-';
+				}
+			}
+			else if(x == 0) {
+				if(board[x][y] != '-') {
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					board[x+1][y] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					board[x+1][y-1] = '-';
+				}
+				if(board[x+1][y-2] != '-') {
+					board[x+1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					board[x][y-2] = '-';
+				}
+			}
+			else if(x == 6) {
+				if(board[x][y] != '-') {
+					board[x][y] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					board[x-1][y] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					board[x-1][y-1] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					board[x-1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					board[x][y-2] = '-';
+				}
+			}
+			else if(y-1 == 0) {
+				if(board[x-1][y-1] != '-') {
+					board[x-1][y-1] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					board[x-1][y] = '-';
+				}
+				if(board[x][y] != '-') {
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					board[x+1][y] = '-';
+				}
+				if(board[x+1][y-1] != '-') {
+					board[x+1][y-1] = '-';
+				}
+
+			}
+			else if(y-1 == 8) {
+				if(board[x+1][y-1] != '-') {
+					board[x+1][y-1] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					board[x-1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					board[x][y-2] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					board[x-1][y-2] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					board[x-1][y-1] = '-';
+				}
+
+			}
+			else {
+				if(board[x+1][y-1] != '-') {
+					board[x+1][y-1] = '-';
+				}
+				if(board[x+1][y-2] != '-') {
+					board[x+1][y-2] = '-';
+				}
+				if(board[x][y-2] != '-') {
+					board[x][y-2] = '-';
+				}
+				if(board[x-1][y-2] != '-') {
+					board[x-1][y-2] = '-';
+				}
+				if(board[x-1][y-1] != '-') {
+					board[x-1][y-1] = '-';
+				}
+				if(board[x-1][y] != '-') {
+					board[x-1][y] = '-';
+				}
+				if(board[x][y] != '-') {
+					board[x][y] = '-';
+				}
+				if(board[x+1][y] != '-') {
+					board[x+1][y] = '-';
+				}
+			}
+		}
 	}
 	
 	private static void ClearUndo() {
@@ -483,65 +896,66 @@ public class Main {
 		int y = 0;
 		int xDes = 0;
 		int yDes = 0;
-		if(moveUndo[undoIndex].length() >= 4) {
-			x = Character.getNumericValue(moveUndo[undoIndex].charAt(0));
-			y = Character.getNumericValue(moveUndo[undoIndex].charAt(1));
+		if(moveUndo[undoIndex].length() >= 5) {
+			char tempPiece = moveUndo[undoIndex].charAt(0);
+			x = Character.getNumericValue(moveUndo[undoIndex].charAt(1));
+			y = Character.getNumericValue(moveUndo[undoIndex].charAt(2));
 			y-=1;
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(2));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(3));
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(3));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(4));
 			yDes-=1;
 			char temp = board[xDes][yDes];
 			board[x][y] = temp;
 			board[xDes][yDes] = '-';
+			if(board[x][y] != tempPiece) {
+				board[x][y] = tempPiece;				
+			}
 		}
-		if(moveUndo[undoIndex].length() >= 7) {
-			char tempPiece = moveUndo[undoIndex].charAt(4);
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(5));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(6));
+		if(moveUndo[undoIndex].length() >= 8) {
+			char tempPiece = moveUndo[undoIndex].charAt(5);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(6));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(7));
 			yDes-=1;
 			board[xDes][yDes] = tempPiece;
 		}
-		if(moveUndo[undoIndex].length() >= 10) {
-			char tempPiece = moveUndo[undoIndex].charAt(7);
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(8));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(9));
-			yDes-=1;
-			board[xDes][yDes] = tempPiece;
-		}
-
-		if(moveUndo[undoIndex].length() >= 13) {
-			char tempPiece = moveUndo[undoIndex].charAt(10);
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(11));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(12));
-			yDes-=1;
-			board[xDes][yDes] = tempPiece;
-		}
-		if(moveUndo[undoIndex].length() >= 16) {
-			char tempPiece = moveUndo[undoIndex].charAt(13);
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(14));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(15));
-			yDes-=1;
-			board[xDes][yDes] = tempPiece;
-		}
-		if(moveUndo[undoIndex].length() >= 19) {
-			char tempPiece = moveUndo[undoIndex].charAt(16);
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(17));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(18));
+		if(moveUndo[undoIndex].length() >= 11) {
+			char tempPiece = moveUndo[undoIndex].charAt(8);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(9));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(10));
 			yDes-=1;
 			board[xDes][yDes] = tempPiece;
 		}
 
-		else if(moveUndo[undoIndex].length() >= 22) {
-			char tempPiece = moveUndo[undoIndex].charAt(19);
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(20));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(21));
+		if(moveUndo[undoIndex].length() >= 14) {
+			char tempPiece = moveUndo[undoIndex].charAt(11);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(12));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(13));
 			yDes-=1;
 			board[xDes][yDes] = tempPiece;
 		}
-		else if(moveUndo[undoIndex].length() == 25) {
-			char tempPiece = moveUndo[undoIndex].charAt(22);
-			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(23));
-			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(24));
+		if(moveUndo[undoIndex].length() >= 17) {
+			char tempPiece = moveUndo[undoIndex].charAt(14);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(15));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(16));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}
+		if(moveUndo[undoIndex].length() >= 20) {
+			char tempPiece = moveUndo[undoIndex].charAt(17);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(18));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(19));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}if(moveUndo[undoIndex].length() >= 23) {
+			char tempPiece = moveUndo[undoIndex].charAt(20);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(21));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(22));
+			yDes-=1;
+			board[xDes][yDes] = tempPiece;
+		}if(moveUndo[undoIndex].length() == 26) {
+			char tempPiece = moveUndo[undoIndex].charAt(23);
+			xDes = Character.getNumericValue(moveUndo[undoIndex].charAt(24));
+			yDes = Character.getNumericValue(moveUndo[undoIndex].charAt(25));
 			yDes-=1;
 			board[xDes][yDes] = tempPiece;
 		}
@@ -583,6 +997,7 @@ public class Main {
 		
 		board[3][8] = 'K';
 		legalMoves = new String[100][depthCount+1];
+
 		
 	}
 	
@@ -749,6 +1164,36 @@ public class Main {
 				}
 			}
 		}
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
+		}
 	}
 	
 	private static void BishopMoves(int x, int y, int depth) {
@@ -823,7 +1268,7 @@ public class Main {
 				tempX = x + 1;
 				tempY = y - 1;
 				while(board[tempX][tempY] == '-') {
-					if(tempY < 1)
+					if(tempY < 1 || tempX < 5)
 						break;
 					tempX++;
 					tempY--;
@@ -931,7 +1376,7 @@ public class Main {
 				tempX = x - 1;
 				tempY = y - 1;
 				while(board[tempX][tempY] == '-') {
-					if(tempY < 1)
+					if(tempY < 1 || tempX < 1)
 						break;
 					tempX--;
 					tempY--;
@@ -1489,6 +1934,36 @@ public class Main {
 			}
 			
 		}
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
+		}
 	}
 	
 	private static void KnightMoves(int x, int y, int depth) {
@@ -1731,6 +2206,36 @@ public class Main {
 					break;
 				}
 			}
+		}
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
 		}
 	}
 	private static void RookMoves(int x, int y, int depth) {
@@ -2081,6 +2586,37 @@ public class Main {
 				}
 			}
 		}
+
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
+		}
 	}
 	
 	private static void KingMoves(int x, int y, int depth){
@@ -2278,6 +2814,37 @@ public class Main {
 					}
 				}
 			}
+		}
+
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
 		}
 	}
 	
@@ -3019,6 +3586,36 @@ public class Main {
 			}
 			
 		}
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
+		}
 	}
 	
 	private static void ComputerKnightMoves(int x, int y, int depth) {
@@ -3261,6 +3858,36 @@ public class Main {
 					break;
 				}
 			}
+		}
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
 		}
 	}
 	
@@ -3611,6 +4238,36 @@ public class Main {
 					break;
 				}
 			}
+		}
+		switch(x) {
+		case 6:
+			legalMoves[moveIndex][depth] = "G" + (y+1) + "G" + (y+1);
+			moveIndex++;
+			break;
+		case 5:
+			legalMoves[moveIndex][depth] = "F" + (y+1) + "F" + (y+1);
+			moveIndex++;
+			break;
+		case 4:
+			legalMoves[moveIndex][depth] = "E" + (y+1) + "E" + (y+1);
+			moveIndex++;
+			break;
+		case 3:
+			legalMoves[moveIndex][depth] = "D" + (y+1) + "D" + (y+1);
+			moveIndex++;
+			break;
+		case 2:
+			legalMoves[moveIndex][depth] = "C" + (y+1) + "C" + (y+1);
+			moveIndex++;
+			break;
+		case 1:
+			legalMoves[moveIndex][depth] = "B" + (y+1) + "B" + (y+1);
+			moveIndex++;
+			break;
+		case 0:
+			legalMoves[moveIndex][depth] = "A" + (y+1) + "A" + (y+1);
+			moveIndex++;
+			break;
 		}
 	}
 	
